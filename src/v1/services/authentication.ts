@@ -8,11 +8,4 @@ import * as fs from 'fs';
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
     // Authenticate request
-    fs.rename("/tmp/stuff", "/tmp/staff", (err) => {
-        if (err) {
-            next(new HttpError("auth.authenticate.stuffstaff", HttpError.AUTH_FAILED));
-        } else {
-            next();
-        }
-    });
 };
