@@ -1,0 +1,27 @@
+{
+  "name": "express-starter",
+  "version": "1.0.0",
+  "description": "Starter template for express REST API",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Vili Kinnunen",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "dotenv": "^4.0.0",
+    "express": "^4.15.3",
+    "morgan": "^1.8.2",
+    "shortid": "^2.2.8"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.16.3",
+    "@types/dotenv": "^4.0.0",
+    "@types/express": "^4.0.35",
+    "@types/morgan": "^1.7.32",
+    "@types/node": "^7.0.29",
+    "typescript": "^2.3.4"
+  }
+}
