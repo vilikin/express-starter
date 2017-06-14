@@ -24,9 +24,10 @@ export default class HttpError {
         this.extra = originalError;
     }
 
-    static AUTH_FAILED: ErrorType = {
-        statusCode: 404,
-        message: "Authentication failed"
+    static MISSING_AUTH_TOKEN: ErrorType = {
+        statusCode: 401,
+        message: "Unauthorized request. This resource requires authentication. " +
+        "Please provide an access token with your request as Authorization header."
     };
 
     static UNEXPECTED_SERVER_ERROR: ErrorType = {

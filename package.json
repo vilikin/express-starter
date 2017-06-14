@@ -13,6 +13,7 @@
     "body-parser": "^1.17.2",
     "dotenv": "^4.0.0",
     "express": "^4.15.3",
+    "jwt-simple": "^0.5.1",
     "morgan": "^1.8.2",
     "shortid": "^2.2.8"
   },
@@ -20,6 +21,7 @@
     "@types/body-parser": "^1.16.3",
     "@types/dotenv": "^4.0.0",
     "@types/express": "^4.0.35",
+    "@types/jwt-simple": "^0.5.33",
     "@types/morgan": "^1.7.32",
     "@types/node": "^7.0.29",
     "typescript": "^2.3.4"
