@@ -12,7 +12,7 @@ router.post("/", authenticate(), (req: express.Request, res: express.Response) =
     projects.create(req.body);
 
     res.json({
-        message: "Project created successfully by user " + req.user.username
+        message: "Project created successfully by user " + req.user
     });
 });
 

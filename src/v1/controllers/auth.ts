@@ -1,15 +1,25 @@
 import * as express from 'express';
-import { requestToken, refreshToken } from '../services/authentication';
+import {requestToken, refreshToken, createUser} from '../services/authentication';
 import { Request, Response, NextFunction } from '@types/express';
 
 const router = express.Router();
 
 router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const token = await requestToken(req.body.username, req.body.password);
+        const tokens = await requestToken(req.body.username, req.body.password, true);
+
+        res.json(tokens);
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        await createUser(req.body);
 
         res.json({
-            token
+            message: "ok"
         });
     } catch (err) {
         next(err);

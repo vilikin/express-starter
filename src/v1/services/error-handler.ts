@@ -48,17 +48,19 @@ const errorHandler = (err: Object, req: Request, res: Response, next) => {
     let id: string = shortid.generate();
 
     if (err instanceof Error) {
-        let httpError = new HttpError("unexpected_error", HttpError.UNEXPECTED_SERVER_ERROR, err);
+        let httpError = new HttpError("unexpected_error", HttpError.INTERNAL_SERVER_ERROR, err);
         respondWithError(id, httpError, res);
     } else if (err instanceof HttpError) {
         respondWithError(id, err, res);
     } else {
         // This should be unreachable
-        let httpError = new HttpError("unexpected_error", HttpError.UNEXPECTED_SERVER_ERROR);
+        let httpError = new HttpError("unexpected_error", HttpError.INTERNAL_SERVER_ERROR);
         respondWithError(id, httpError, res);
     }
 
-    persistError(id, err, req);
+    if (config.logErrors) {
+        persistError(id, err, req);
+    }
 };
 
 export default errorHandler;

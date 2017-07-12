@@ -10,6 +10,7 @@
   "author": "Vili Kinnunen",
   "license": "ISC",
   "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
     "body-parser": "^1.17.2",
     "dotenv": "^4.0.0",
     "express": "^4.15.3",
@@ -19,6 +20,7 @@
     "shortid": "^2.2.8"
   },
   "devDependencies": {
+    "@types/bcrypt-nodejs": "0.0.30",
     "@types/body-parser": "^1.16.3",
     "@types/dotenv": "^4.0.0",
     "@types/express": "^4.0.35",

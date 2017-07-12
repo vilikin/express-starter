@@ -31,9 +31,10 @@ export default class HttpError {
         message: "You have no permissions to access this route."
     };
 
-    static REVOKED_AUTH_TOKEN: ErrorType = {
+    static INVALID_SESSION: ErrorType = {
         statusCode: 401,
-        message: "The auth token has been revoked. Please retrieve new one through login."
+        message: "The session has been invalidated or deleted. " +
+                 "Please retrieve new token through login."
     };
 
     static EXPIRED_AUTH_TOKEN: ErrorType = {
@@ -49,7 +50,7 @@ export default class HttpError {
     static MISSING_AUTH_TOKEN: ErrorType = {
         statusCode: 401,
         message: "Unauthorized request. This resource requires authentication. " +
-        "Please provide an access token with your request as Authorization header."
+                 "Please provide an access token with your request as an Authorization header."
     };
 
     // REQUEST TOKEN
@@ -61,12 +62,7 @@ export default class HttpError {
 
     // TOKEN REFRESH
 
-    static AUTH_TOKEN_REFRESH_NOT_ALLOWED: ErrorType = {
-        statusCode: 403,
-        message: "This token cannot be refreshed."
-    };
-
-    static UNEXPECTED_SERVER_ERROR: ErrorType = {
+    static INTERNAL_SERVER_ERROR: ErrorType = {
         statusCode: 500,
         message: "An unexpected error occurred"
     };

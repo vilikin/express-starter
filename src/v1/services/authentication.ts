@@ -1,101 +1,70 @@
-import {Response, Request, NextFunction} from 'express';
+import { Response, Request, NextFunction } from 'express';
 import * as jwt from 'jwt-simple';
 import * as moment from 'moment';
+import { hash, compare } from './crypto';
 
 import config from '../../../config';
 import HttpError from "../utils/HttpError";
 
-const userMockdata = [
-    {
-        id: 1,
-        username: "vili",
-        password: "vili",
-        role: "admin",
-        allowTokenRefresh: true
-    },
-    {
-        id: 2,
-        username: "erika",
-        password: "erika",
-        role: "user",
-        allowTokenRefresh: false
-    }
-];
+const TYPE_AUTH_TOKEN = "auth";
+const TYPE_REFRESH_TOKEN = "refresh";
 
-let sessions = [
-    {
-        token: "23834thu4ewihuhu",
-        user: 1,
-        revoked: false
-    }
-];
+const users = [];
 
-const saveSession = async (token: string, user: number) => {
+let sessions = [];
+
+const initSession = async (user: number) => {
+
+    const id = sessions.length;
+
     sessions.push({
-        token,
+        id,
         user,
         revoked: false
     });
+
+    return id;
 };
 
 const updateSession = async (oldToken: string, newToken: string) => {
-    sessions.forEach((session, index) => {
+
+    for (let session of sessions) {
         if (session.token === oldToken) {
-            sessions[index].token = newToken;
+            session.token = newToken;
         }
-    });
+    }
 };
 
-const isTokenRefreshAllowed = async token => {
-    let refreshAllowed = false;
-
-    sessions.forEach(session => {
-        if (session.token === token && !session.revoked) {
-            userMockdata.forEach(user => {
-                if (user.id === session.user && user.allowTokenRefresh) {
-                    refreshAllowed = true;
-                }
-            });
-        }
-    });
-
-    return refreshAllowed;
+const getSession = async sessionId => {
+    return sessions.find(session => session.id === sessionId);
 };
 
-const isTokenRevoked = async token => {
-    let isRevoked = false;
+const getUser = async id => {
 
-    sessions.forEach(session => {
-        if (session.token === token && session.revoked) {
-            isRevoked = true;
-        }
-    });
-
-    return isRevoked;
-};
-
-const getUserById = async id => {
-    let matchingUser = null;
-
-    userMockdata.forEach(user => {
+    for (let user of users) {
         if (user.id === id) {
-            matchingUser = user;
+            return user;
         }
-    });
+    }
 
-    return matchingUser;
+    return null;
 };
 
 const getUserWithCredentials = async (username: string, password: string) => {
-    let matchingUser = null;
 
-    userMockdata.forEach(user => {
-        if (username === user.username && password === user.password) {
-            matchingUser = user;
+    for (let user of users) {
+        if (username === user.username) {
+            const match = await compare(password, user.password);
+
+            if (match) {
+                return user;
+            }
+
+            return null;
         }
-    });
+    }
 
-    return matchingUser;
+    return null;
 };
 
 // Generates authentication function for specific role
@@ -115,73 +84,111 @@ export const authenticate = (allowedRoles?: Array<string>, allowedUsers?: Array<
             return next(new HttpError("auth_invalid_token", HttpError.INVALID_AUTH_TOKEN));
         }
 
+        if (payload.type !== TYPE_AUTH_TOKEN) {
+            return next(new HttpError("auth_incorrect_token_type", HttpError.INVALID_AUTH_TOKEN));
+        }
+
         if (payload.expiry < moment().unix()) {
             return next(new HttpError("auth_expired_token", HttpError.EXPIRED_AUTH_TOKEN));
-        } else {
-            const revoked = await isTokenRevoked(token);
-
-            if (revoked) {
-                return next(new HttpError("auth_revoked_token", HttpError.REVOKED_AUTH_TOKEN));
-            }
         }
 
-        const user = await getUserById(payload.user);
-
-        if (!user) {
-            return next(new HttpError("auth_user_not_found", HttpError.INVALID_AUTH_TOKEN));
-        }
-
-        if (allowedRoles && allowedRoles.indexOf(user.role) === -1) {
+        if (allowedRoles && allowedRoles.indexOf(payload.role) === -1) {
             return next(new HttpError("auth_role_not_allowed_access", HttpError.AUTH_NO_PERMISSIONS));
         }
 
-        if (allowedUsers && allowedUsers.indexOf(user.id) === -1) {
+        if (allowedUsers && allowedUsers.indexOf(payload.user) === -1) {
             return next(new HttpError("auth_user_not_allowed_access", HttpError.AUTH_NO_PERMISSIONS));
         }
 
-        req.user = user;
+        req.user = payload.user;
+        req.role = payload.role;
 
         next();
     }
 };
 
-export const requestToken = async (username: string, password: string) => {
+export const requestToken = async (username: string, password: string, generateRefreshToken: boolean) => {
     const user = await getUserWithCredentials(username, password);
 
     if (!user) {
         throw new HttpError("auth_invalid_credentials", HttpError.AUTH_INVALID_CREDENTIALS);
     }
 
+    const sessionId = await initSession(user.id);
+
     const tokenContent = {
+        type: TYPE_AUTH_TOKEN,
+        session: sessionId,
         user: user.id,
+        role: user.role,
         expiry: moment().add(config.tokenExpiryTime.value, config.tokenExpiryTime.unit).unix()
     };
 
-    const token = jwt.encode(tokenContent, config.tokenSecret);
+    const authToken = jwt.encode(tokenContent, config.tokenSecret);
 
-    await saveSession(token, user.id);
+    let refreshToken;
 
-    return token;
+    if (generateRefreshToken) {
+        const refreshTokenContent = {
+            type: TYPE_REFRESH_TOKEN,
+            session: sessionId
+        };
+
+        refreshToken = jwt.encode(refreshTokenContent, config.tokenSecret);
+    }
+
+    return {
+        authToken,
+        refreshToken
+    };
 };
 
 export const refreshToken = async token => {
-    const allowed = await isTokenRefreshAllowed(token);
-
-    if (!allowed) {
-        throw new HttpError("auth_token_refresh_not_allowed", HttpError.AUTH_TOKEN_REFRESH_NOT_ALLOWED);
-    }
+    let payload;
 
     try {
-        let payload = jwt.decode(token, config.tokenSecret);
-
-        payload.expiry = moment().add(config.tokenExpiryTime.value, config.tokenExpiryTime.unit).unix();
-
-        const newToken = jwt.encode(payload, config.tokenSecret);
-
-        await updateSession(token, newToken);
-
-        return newToken;
+        payload = jwt.decode(token, config.tokenSecret);
     } catch (err) {
         throw new HttpError("auth_invalid_token", HttpError.INVALID_AUTH_TOKEN);
     }
+
+    if (payload.type === TYPE_AUTH_TOKEN) {
+        if (payload.expiry < moment().unix()) {
+            throw new HttpError("auth_expired_token", HttpError.EXPIRED_AUTH_TOKEN);
+        }
+    }
+
+    const session = await getSession(payload.session);
+
+    if (!session) {
+        throw new HttpError("auth_session_not_found", HttpError.INVALID_SESSION);
+    }
+
+    if (session.revoked) {
+        throw new HttpError("auth_session_revoked", HttpError.INVALID_SESSION);
+    }
+
+    const user = await getUser(session.user);
+
+    if (!user) {
+        throw new HttpError("auth_user_not_found", HttpError.INVALID_AUTH_TOKEN);
+    }
+
+    payload.expiry = moment().add(config.tokenExpiryTime.value, config.tokenExpiryTime.unit).unix();
+    payload.role = user.role;
+
+    const newToken = jwt.encode(payload, config.tokenSecret);
+
+    await updateSession(token, newToken);
+
+    return newToken;
+};
+
+export const createUser = async user => {
+    user.password = await hash(user.password);
+
+    user.id = users.length;
+    user.role = "user";
+
+    users.push(user);
 };
